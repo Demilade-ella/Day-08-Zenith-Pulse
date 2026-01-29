@@ -1,26 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import confetti from 'canvas-confetti';
 import Heatmap from './Heatmap';
 import SessionSummary from './SessionSummary';
 import '../styles/Zenith.css';
 
 function Zenith() {
-    const [setMinutes, setSetMinutes] = useState(25);
     const [isActive, setIsActive] = useState(false);
-    const [seconds, setSeconds] = useState(25 * 60);
+    const [seconds, setSeconds] = useState(1500);
     const [totalFocusTime, setTotalFocusTime] = useState(0);
 
     const [activeSound, setActiveSound] = useState(null);
     const [audioPlayer] = useState(new Audio());
 
     const [focusHistory, setFocusHistory] = useState(() => {
+        try {
             const saved = localStorage.getItem('zeniith_history');
             return saved ? JSON.parse(saved) : {};
-    });
+    } catch (e) {
+        return {};
+    }
+});
 
     const [currentTask, setCurrentTask] = useState("");
-    const [currentSessionMinutes, setCurrentSessionMinutes] = useState(25);
 
     const [showSummary, setShowSummary] = useState(false);
 
@@ -31,10 +32,11 @@ function Zenith() {
                 setSeconds(prev => prev - 1);
                 setTotalFocusTime(prev => prev + 1);
             }, 1000);
-        } else if (seconds === 0) {
-            clearInterval(interval);
+        } else if (seconds === 0 && isActive) {
             setIsActive(false);
+            setShowSummary(true);
             playSuccess();
+            clearInterval(interval);
         }
         return () => clearInterval(interval);
     }, [isActive, seconds]);
@@ -82,7 +84,7 @@ function Zenith() {
             setFocusHistory(updatedHistory);
             localStorage.setItem('zenith_history', JSON.stringify(updatedHistory));
         }
-    }, [totalFocusTime]);
+    }, [totalFocusTime, focusHistory, isActive]);
 
     useEffect(() => {
         let interval = null;
@@ -98,13 +100,6 @@ function Zenith() {
         }
         return () => clearInterval(interval);
     }, [isActive, seconds]);
-
-    const handleTimeChange = (newMins) => {
-        if (isActive) return;
-        const clampedMins = Math.max(1, Math.min(newMins, 120));
-        setSetMinutes(clampedMins);
-        setSeconds(clampedMins * 60)
-    };
 
   return (
     <div className='zenith-container'>
@@ -207,7 +202,7 @@ function Zenith() {
             setShowSummary(false);
             setCurrentTask("");
         }}
-        minutesDone={currentSessionMinutes}
+        minutesDone={totalFocusTime}
         taskName={currentTask || "Deep Work"}
       />
     </div>
